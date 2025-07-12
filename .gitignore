@@ -51,6 +51,8 @@ google-services.json
 # Gradle
 .gradle/
 build/
+gradle-install/
+gradle.zip
 
 # IDE
 .idea/
