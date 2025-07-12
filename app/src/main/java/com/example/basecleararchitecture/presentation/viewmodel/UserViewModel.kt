@@ -1,7 +1,7 @@
 package com.example.basecleararchitecture.presentation.viewmodel
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.basecleararchitecture.base.BaseViewModel
 import com.example.basecleararchitecture.domain.model.User
 import com.example.basecleararchitecture.domain.usecase.GetUsersUseCase
 import com.example.basecleararchitecture.utils.Resource
@@ -14,13 +14,14 @@ import javax.inject.Inject
 @HiltViewModel
 class UserViewModel @Inject constructor(
     private val getUsersUseCase: GetUsersUseCase
-) : ViewModel() {
+) : BaseViewModel() {
     
     private val _users = MutableStateFlow<Resource<List<User>>>(Resource.Loading())
     val users: StateFlow<Resource<List<User>>> = _users
     
     init {
         getUsers()
+        loadNativeAd()
     }
     
     fun getUsers() {

@@ -1,55 +1,95 @@
 package com.example.basecleararchitecture.presentation.ui.activities
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.basecleararchitecture.presentation.ui.screens.MainScreen
-import com.example.basecleararchitecture.presentation.ui.theme.BaseClearArchitectureTheme
+import android.view.View
+import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.basecleararchitecture.base.BaseActivity
+import com.example.basecleararchitecture.databinding.ActivityMainBinding
+import com.example.basecleararchitecture.presentation.adapter.UserAdapter
 import com.example.basecleararchitecture.presentation.viewmodel.UserViewModel
-import com.example.basecleararchitecture.utils.ads.InterstitialAdManager
-import com.google.firebase.analytics.FirebaseAnalytics
-import com.google.firebase.analytics.ktx.analytics
-import com.google.firebase.ktx.Firebase
+import com.example.basecleararchitecture.utils.Resource
+import com.example.basecleararchitecture.ads.AppOpenAdManager
+import com.example.basecleararchitecture.ads.BannerAdManager
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : BaseActivity<ActivityMainBinding>() {
     
-    private lateinit var interstitialAdManager: InterstitialAdManager
-    private lateinit var firebaseAnalytics: FirebaseAnalytics
+    private val viewModel: UserViewModel by viewModels()
+    
+    @Inject
+    lateinit var userAdapter: UserAdapter
+    
+    @Inject
+    lateinit var bannerAdManager: BannerAdManager
+    
+    override fun getViewBinding(): ActivityMainBinding {
+        return ActivityMainBinding.inflate(layoutInflater)
+    }
+    
+    override fun setupViews() {
+        setSupportActionBar(binding.toolbar)
+        
+        // Setup RecyclerView
+        binding.recyclerView.apply {
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            adapter = userAdapter
+        }
+        
+        // Setup Banner Ad
+        bannerAdManager.loadBannerAd(binding.adView)
+        
+        // Setup click listeners
+        binding.btnRefresh.setOnClickListener {
+            viewModel.refreshUsers()
+        }
+        
+        binding.btnShowInterstitial.setOnClickListener {
+            showInterstitialAd()
+        }
+    }
+    
+    override fun setupObservers() {
+        lifecycleScope.launch {
+            viewModel.users.collect { resource ->
+                when (resource) {
+                    is Resource.Loading -> {
+                        binding.progressBar.visibility = View.VISIBLE
+                        binding.recyclerView.visibility = View.GONE
+                        binding.tvError.visibility = View.GONE
+                    }
+                    is Resource.Success -> {
+                        binding.progressBar.visibility = View.GONE
+                        binding.recyclerView.visibility = View.VISIBLE
+                        binding.tvError.visibility = View.GONE
+                        
+                        resource.data?.let { users ->
+                            userAdapter.updateItems(users)
+                        }
+                    }
+                    is Resource.Error -> {
+                        binding.progressBar.visibility = View.GONE
+                        binding.recyclerView.visibility = View.GONE
+                        binding.tvError.visibility = View.VISIBLE
+                        binding.tvError.text = resource.message ?: "Unknown error"
+                    }
+                }
+            }
+        }
+    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        firebaseAnalytics = Firebase.analytics
-        interstitialAdManager = InterstitialAdManager(this)
-        
-        // Load interstitial ad
-        interstitialAdManager.loadAd()
-        
-        // Log main screen view
-        firebaseAnalytics.logEvent("main_screen_view", null)
-        
-        setContent {
-            BaseClearArchitectureTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    val userViewModel: UserViewModel = hiltViewModel()
-                    MainScreen(
-                        viewModel = userViewModel,
-                        onShowInterstitialAd = {
-                            interstitialAdManager.showAd(this@MainActivity)
-                        }
-                    )
-                }
+        // Show app open ad
+        showAppOpenAd(object : AppOpenAdManager.OnShowAdCompleteListener {
+            override fun onShowAdComplete() {
+                // Continue with app flow
             }
-        }
+        })
     }
 }

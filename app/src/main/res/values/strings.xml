@@ -7,4 +7,7 @@
     <string name="refresh">Refresh</string>
     <string name="show_interstitial_ad">Show Interstitial Ad</string>
     <string name="users_list">Users List</string>
+    
+    <!-- Ad Unit IDs -->
+    <string name="banner_ad_unit_id">ca-app-pub-3940256099942544/6300978111</string>
 </resources>
